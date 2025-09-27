@@ -29,6 +29,7 @@ contract CompanyVoting is SepoliaConfig {
 
     uint256 public nextCompanyId;
     mapping(uint256 => Company) private companies;
+    uint256[] private companyIds;
 
     event CompanyCreated(uint256 indexed companyId, string name, uint256 employeeLimit);
     event JoinedCompany(uint256 indexed companyId, address indexed account);
@@ -45,6 +46,7 @@ contract CompanyVoting is SepoliaConfig {
         Company storage c = companies[companyId];
         c.name = name;
         c.employeeLimit = employeeLimit;
+        companyIds.push(companyId);
         emit CompanyCreated(companyId, name, employeeLimit);
     }
 
@@ -210,5 +212,30 @@ contract CompanyVoting is SepoliaConfig {
         }
         return out;
     }
-}
 
+    /// @notice Returns all companies' basic info for discovery and joining UI
+    function getAllCompanies()
+        external
+        view
+        returns (
+            uint256[] memory ids,
+            string[] memory names,
+            uint256[] memory limits,
+            uint256[] memory memberCounts
+        )
+    {
+        uint256 n = companyIds.length;
+        ids = new uint256[](n);
+        names = new string[](n);
+        limits = new uint256[](n);
+        memberCounts = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            uint256 cid = companyIds[i];
+            Company storage c = companies[cid];
+            ids[i] = cid;
+            names[i] = c.name;
+            limits[i] = c.employeeLimit;
+            memberCounts[i] = c.members.length;
+        }
+    }
+}
