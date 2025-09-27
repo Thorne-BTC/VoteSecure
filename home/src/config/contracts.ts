@@ -41,3 +41,7 @@ export const CONTRACT_ABI = [
   { "inputs": [ { "internalType": "uint256", "name": "companyId", "type": "uint256" }, { "internalType": "address", "name": "account", "type": "address" } ], "name": "isCompanyMember", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "view", "type": "function" },
   { "inputs": [ { "internalType": "uint256", "name": "companyId", "type": "uint256" }, { "internalType": "uint256", "name": "pollId", "type": "uint256" } ], "name": "getEncryptedCounts", "outputs": [ { "internalType": "euint32[]", "name": "", "type": "bytes32[]" } ], "stateMutability": "view", "type": "function" }
 ] as const;
+// Additional view for listing companies (copy from deployments ABI after deploy)
+export const CONTRACT_ABI_EXTRAS = [
+  { "inputs": [], "name": "getAllCompanies", "outputs": [ { "internalType": "uint256[]", "name": "ids", "type": "uint256[]" }, { "internalType": "string[]", "name": "names", "type": "string[]" }, { "internalType": "uint256[]", "name": "limits", "type": "uint256[]" }, { "internalType": "uint256[]", "name": "memberCounts", "type": "uint256[]" } ], "stateMutability": "view", "type": "function" }
+] as const;
