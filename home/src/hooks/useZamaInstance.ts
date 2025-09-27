@@ -1,12 +1,43 @@
-import { useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { createInstance,initSDK,SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
 
-// Provides a factory for the Zama Relayer SDK instance loaded via UMD script
 export function useZamaInstance() {
-  return useCallback(() => {
-    const w: any = window as any;
-    const Ctor = w?.FhevmInstance || w?.RelayerSDK?.FhevmInstance || w?.relayerSdk?.FhevmInstance;
-    if (!Ctor) throw new Error('Relayer SDK not loaded');
-    return new Ctor();
-  }, []);
-}
+  const [instance, setInstance] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const initZama = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        await initSDK()
+
+        const zamaInstance = await createInstance(SepoliaConfig);
+
+        if (mounted) {
+          setInstance(zamaInstance);
+        }
+      } catch (err) {
+        console.error('Failed to initialize Zama instance:', err);
+        if (mounted) {
+          setError('Failed to initialize encryption service');
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initZama();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return { instance, isLoading, error };
+}

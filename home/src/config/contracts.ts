@@ -43,5 +43,6 @@ export const CONTRACT_ABI = [
 ] as const;
 // Additional view for listing companies (copy from deployments ABI after deploy)
 export const CONTRACT_ABI_EXTRAS = [
+  { "inputs": [], "name": "nextCompanyId", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" },
   { "inputs": [], "name": "getAllCompanies", "outputs": [ { "internalType": "uint256[]", "name": "ids", "type": "uint256[]" }, { "internalType": "string[]", "name": "names", "type": "string[]" }, { "internalType": "uint256[]", "name": "limits", "type": "uint256[]" }, { "internalType": "uint256[]", "name": "memberCounts", "type": "uint256[]" } ], "stateMutability": "view", "type": "function" }
 ] as const;

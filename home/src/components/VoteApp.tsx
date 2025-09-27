@@ -34,7 +34,7 @@ export function VoteApp() {
   ), []);
   const [companies, setCompanies] = useState<Array<{id: bigint; name: string; limit: bigint; members: bigint}>>([]);
   const getSigner = useEthersSigner();
-  const getRelayerInstance = useZamaInstance();
+  const { instance: zama, isLoading: zamaLoading } = useZamaInstance();
 
   useEffect(() => {
     // Load selected poll info when company/poll changes
@@ -56,6 +56,7 @@ export function VoteApp() {
 
   async function refreshCompanies() {
     try {
+      // Preferred: call view getAllCompanies
       const [ids, names, limits, memberCounts] = (await client.readContract({
         address: CONTRACT_ADDRESS as `0x${string}`,
         abi: ABI as any,
@@ -68,7 +69,32 @@ export function VoteApp() {
         setCompanyId(Number(list[0].id));
       }
     } catch (e) {
-      setCompanies([]);
+      // Fallback: enumerate by nextCompanyId and getCompany for each
+      try {
+        const total = (await client.readContract({
+          address: CONTRACT_ADDRESS as `0x${string}`,
+          abi: ABI as any,
+          functionName: 'nextCompanyId',
+          args: [],
+        })) as unknown as bigint;
+        const ids = Array.from({ length: Number(total) }, (_, i) => BigInt(i + 1));
+        const list = await Promise.all(ids.map(async (id) => {
+          const [name, limit, memberCount] = (await client.readContract({
+            address: CONTRACT_ADDRESS as `0x${string}`,
+            abi: ABI as any,
+            functionName: 'getCompany',
+            args: [id],
+          })) as unknown as [string, bigint, bigint];
+          return { id, name, limit, members: memberCount };
+        }));
+        setCompanies(list);
+        if (list.length && !companies.find(c => c.id === BigInt(companyId))) {
+          setCompanyId(Number(list[0].id));
+        }
+      } catch (e2) {
+        console.error('Failed to load companies', e, e2);
+        setCompanies([]);
+      }
     }
   }
 
@@ -105,9 +131,8 @@ export function VoteApp() {
 
   async function vote(optionIndex: number) {
     const { signer, contract } = await withSigner();
-    const instance = getRelayerInstance();
-    await instance.init();
-    const enc = await instance.createEncryptedInput(CONTRACT_ADDRESS, await signer.getAddress())
+    if (!zama) throw new Error('Encryption service not ready');
+    const enc = await zama.createEncryptedInput(CONTRACT_ADDRESS, await signer.getAddress())
       .add32(1)
       .encrypt();
     const tx = await contract.vote(companyId, pollId, optionIndex, enc.handles[0], enc.inputProof);
@@ -132,15 +157,14 @@ export function VoteApp() {
         args: [BigInt(companyId), BigInt(pollId)],
       })) as unknown as string[];
 
-      const instance = getRelayerInstance();
-      await instance.init();
+      if (!zama) throw new Error('Encryption service not ready');
       const signer = await getSigner();
 
       // Generate keypair and EIP712 request to allow user decryption
-      const keypair = instance.generateKeypair();
+      const keypair = zama.generateKeypair();
       const startTimeStamp = Math.floor(Date.now() / 1000).toString();
       const durationDays = '10';
-      const eip712 = instance.createEIP712(
+      const eip712 = zama.createEIP712(
         keypair.publicKey,
         [CONTRACT_ADDRESS],
         startTimeStamp,
@@ -153,7 +177,7 @@ export function VoteApp() {
       );
 
       const pairs = (encCounts as string[]).map((handle: string) => ({ handle, contractAddress: CONTRACT_ADDRESS }));
-      const res = await instance.userDecrypt(
+      const res = await zama.userDecrypt(
         pairs,
         keypair.publicKey,
         keypair.secretKey,
@@ -240,6 +264,7 @@ export function VoteApp() {
 
         <section style={{ marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8 }}>
           <h2>Poll</h2>
+          <div>Your poll selection is encrypted.</div>
           <div style={{ display: 'grid', gap: 8 }}>
             <div>Selected Company: {companyId || '-'}</div>
             <label htmlFor='pollId'>Poll ID</label>
@@ -252,7 +277,7 @@ export function VoteApp() {
               <div style={{ marginBottom: 8 }}>Progress: {String(pollInfo.totalVoted)} / {String(pollInfo.memberCount)}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {pollInfo.options.map((opt, i) => (
-                  <button key={i} onClick={() => vote(i)} disabled={!address || pollInfo.finalized}>
+                  <button key={i} onClick={() => vote(i)} disabled={!address || pollInfo.finalized || zamaLoading || !zama}>
                     Vote: {opt}
                   </button>
                 ))}
