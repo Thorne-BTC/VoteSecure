@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
+import { Button, FormInput, FormTextarea, StatusMessage, LoadingSpinner } from './ui';
 import { useAccount } from 'wagmi';
 import { createPublicClient, http } from 'viem';
 import { sepolia } from 'viem/chains';
@@ -7,6 +8,7 @@ import { Contract, ethers } from 'ethers';
 import { CONTRACT_ABI, CONTRACT_ABI_EXTRAS, CONTRACT_ADDRESS } from '../config/contracts';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useZamaInstance } from '../hooks/useZamaInstance';
+import '../styles/VoteApp.css';
 
 type PollInfo = {
   title: string;
@@ -192,57 +194,99 @@ export function VoteApp() {
   }
 
   return (
-    <div>
+    <div className="vote-app">
       <Header />
-      <main style={{ maxWidth: 960, margin: '0 auto', padding: 16 }}>
-        <section style={{ marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8 }}>
-          <h2>使用说明</h2>
+      <main className="vote-main">
+        <section className="vote-section instructions">
+          <h2>How to Use</h2>
           <ol>
-            <li>创建公司：填写公司名称与员工数量上限。</li>
-            <li>加入公司：从公司列表中选择并加入。</li>
-            <li>发起投票：选择公司，填写投票标题与选项（每行一个）。</li>
-            <li>公司成员投票：每次投票将对所选选项的计数进行加密加一。</li>
-            <li>投票进度：页面显示已投票人数/公司成员数。</li>
-            <li>全部投票后：可点击完成并解密查看每个选项的票数。</li>
+            <li>Create Company: Enter company name and employee limit.</li>
+            <li>Join Company: Select and join a company from the list.</li>
+            <li>Create Poll: Select a company, enter poll title and options (one per line).</li>
+            <li>Vote: Company members vote, each vote encrypts and increments the selected option count.</li>
+            <li>Progress: The page shows votes cast / total company members.</li>
+            <li>Finalize: After all votes are cast, click finalize and decrypt to view results for each option.</li>
           </ol>
         </section>
 
-        <section style={{ marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8 }}>
+        <section className="vote-section">
           <h2>Create Company</h2>
-          <div style={{ display: 'grid', gap: 8 }}>
-            <label htmlFor='companyName'>Company Name</label>
-            <input id='companyName' value={newCompanyName} onChange={(e) => setNewCompanyName(e.target.value)} />
-            <label htmlFor='companyLimit'>Employee Limit</label>
-            <input id='companyLimit' type='number' value={newCompanyLimit}
-                   onChange={(e) => setNewCompanyLimit(Number(e.target.value))} />
-            <button onClick={createCompany}>Create</button>
+          <div className="form-grid">
+            <FormInput
+              id='companyName'
+              label='Company Name'
+              value={newCompanyName}
+              onChange={(e) => setNewCompanyName(e.target.value)}
+              placeholder="Enter company name"
+              required
+            />
+            <FormInput
+              id='companyLimit'
+              label='Employee Limit'
+              type='number'
+              value={newCompanyLimit}
+              onChange={(e) => setNewCompanyLimit(Number(e.target.value))}
+              placeholder="Enter maximum number of employees"
+              min={1}
+              required
+            />
+            <Button onClick={createCompany}>
+              Create Company
+            </Button>
           </div>
         </section>
 
-        <section style={{ marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8 }}>
+        <section className="vote-section">
           <h2>Join Company</h2>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label htmlFor='companySelect'>Select Company</label>
-            <select id='companySelect' value={companyId} onChange={(e) => setCompanyId(Number(e.target.value))}>
-              {companies.map(c => (
-                <option key={String(c.id)} value={String(c.id)}>
-                  {String(c.id)} - {c.name} (Members: {String(c.members)}/{String(c.limit)})
-                </option>
-              ))}
-            </select>
-            <button onClick={refreshCompanies}>Refresh</button>
-            <button onClick={joinCompany} disabled={!companies.length}>Join</button>
+          <div className="company-selector">
+            <div className="form-group">
+              <label htmlFor='companySelect' className="form-label">Select Company</label>
+              <select
+                id='companySelect'
+                className="form-select"
+                value={companyId}
+                onChange={(e) => setCompanyId(Number(e.target.value))}
+              >
+                {companies.map(c => (
+                  <option key={String(c.id)} value={String(c.id)}>
+                    #{String(c.id)} - {c.name} ({String(c.members)}/{String(c.limit)} members)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button variant="secondary" onClick={refreshCompanies}>
+              Refresh
+            </Button>
+            <Button
+              variant="success"
+              onClick={joinCompany}
+              disabled={!companies.length}
+            >
+              Join Company
+            </Button>
           </div>
           {companies.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>All Companies</div>
-              <div style={{ display: 'grid', gap: 6 }}>
+            <div className="company-list">
+              <h3 style={{ margin: '0 0 1rem 0', color: '#374151', fontSize: '1rem', fontWeight: 600 }}>
+                All Companies
+              </h3>
+              <div>
                 {companies.map(c => (
-                  <div key={String(c.id)} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span>#{String(c.id)}</span>
-                    <span>{c.name}</span>
-                    <span>Members {String(c.members)}/{String(c.limit)}</span>
-                    <button onClick={() => setCompanyId(Number(c.id))} disabled={companyId === Number(c.id)}>Select</button>
+                  <div key={String(c.id)} className="company-item">
+                    <div className="company-info">
+                      <span className="company-id">#{String(c.id)}</span>
+                      <span className="company-name">{c.name}</span>
+                      <span className="company-members">
+                        {String(c.members)}/{String(c.limit)} members
+                      </span>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setCompanyId(Number(c.id))}
+                      disabled={companyId === Number(c.id)}
+                    >
+                      {companyId === Number(c.id) ? 'Selected' : 'Select'}
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -250,54 +294,126 @@ export function VoteApp() {
           )}
         </section>
 
-        <section style={{ marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8 }}>
+        <section className="vote-section">
           <h2>Create Poll</h2>
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div>Selected Company: {companyId || '-'}</div>
-            <label htmlFor='pollTitle'>Poll Title</label>
-            <input id='pollTitle' value={pollTitle} onChange={(e) => setPollTitle(e.target.value)} />
-            <label htmlFor='pollOptions'>Poll Options (one per line)</label>
-            <textarea id='pollOptions' value={pollOptions} onChange={(e) => setPollOptions(e.target.value)} />
-            <button onClick={createPoll} disabled={!companyId}>Create Poll</button>
+          <div className="form-grid">
+            <StatusMessage>
+              Selected Company: #{companyId || '-'}
+            </StatusMessage>
+            <FormInput
+              id='pollTitle'
+              label='Poll Title'
+              value={pollTitle}
+              onChange={(e) => setPollTitle(e.target.value)}
+              placeholder="Enter your poll question"
+              required
+            />
+            <FormTextarea
+              id='pollOptions'
+              label='Poll Options (one per line)'
+              value={pollOptions}
+              onChange={(e) => setPollOptions(e.target.value)}
+              placeholder="Option 1&#10;Option 2&#10;Option 3"
+              required
+            />
+            <Button
+              onClick={createPoll}
+              disabled={!companyId}
+            >
+              Create Poll
+            </Button>
           </div>
         </section>
 
-        <section style={{ marginBottom: 24, padding: 16, background: '#fff', borderRadius: 8 }}>
+        <section className="vote-section">
           <h2>Poll</h2>
-          <div>Your poll selection is encrypted.</div>
-          <div style={{ display: 'grid', gap: 8 }}>
-            <div>Selected Company: {companyId || '-'}</div>
-            <label htmlFor='pollId'>Poll ID</label>
-            <input id='pollId' type='number' value={pollId}
-                   onChange={(e) => setPollId(Number(e.target.value))} />
+          <StatusMessage>
+            🔒 Your poll selection is encrypted and private.
+          </StatusMessage>
+          <div className="form-grid">
+            <StatusMessage>
+              Selected Company: #{companyId || '-'}
+            </StatusMessage>
+            <FormInput
+              id='pollId'
+              label='Poll ID'
+              type='number'
+              value={pollId}
+              onChange={(e) => setPollId(Number(e.target.value))}
+              placeholder="Enter poll ID to view"
+              min={0}
+            />
           </div>
           {pollInfo && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ marginBottom: 8 }}>Title: {pollInfo.title}</div>
-              <div style={{ marginBottom: 8 }}>Progress: {String(pollInfo.totalVoted)} / {String(pollInfo.memberCount)}</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="poll-info">
+              <div className="poll-title">{pollInfo.title}</div>
+              <div className="poll-progress">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: 600, color: '#374151' }}>
+                    Progress: {String(pollInfo.totalVoted)} / {String(pollInfo.memberCount)}
+                  </span>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    {pollInfo.memberCount > 0 ? Math.round((Number(pollInfo.totalVoted) / Number(pollInfo.memberCount)) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="progress-bar">
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: pollInfo.memberCount > 0
+                        ? `${(Number(pollInfo.totalVoted) / Number(pollInfo.memberCount)) * 100}%`
+                        : '0%'
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="poll-options">
                 {pollInfo.options.map((opt, i) => (
-                  <button key={i} onClick={() => vote(i)} disabled={!address || pollInfo.finalized || zamaLoading || !zama}>
-                    Vote: {opt}
-                  </button>
+                  <Button
+                    key={i}
+                    variant="vote"
+                    onClick={() => vote(i)}
+                    disabled={!address || pollInfo.finalized || zamaLoading || !zama}
+                  >
+                    {zamaLoading ? (
+                      <LoadingSpinner text="Loading..." />
+                    ) : (
+                      `Vote: ${opt}`
+                    )}
+                  </Button>
                 ))}
               </div>
               {!pollInfo.finalized && pollInfo.totalVoted === pollInfo.memberCount && (
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={finalize}>Finalize</button>
+                <div style={{ marginTop: '1rem' }}>
+                  <Button variant="success" onClick={finalize}>
+                    Finalize Poll
+                  </Button>
                 </div>
               )}
               {pollInfo.finalized && (
-                <div style={{ marginTop: 12 }}>
-                  <button onClick={decryptResults} disabled={decrypting}>Decrypt Results</button>
+                <div style={{ marginTop: '1rem' }}>
+                  <Button
+                    variant="secondary"
+                    onClick={decryptResults}
+                    disabled={decrypting}
+                  >
+                    {decrypting ? (
+                      <LoadingSpinner text="Decrypting..." />
+                    ) : (
+                      'Decrypt Results'
+                    )}
+                  </Button>
                 </div>
               )}
               {results && (
-                <div style={{ marginTop: 12 }}>
+                <div className="results">
                   <h3>Results</h3>
                   <ul>
                     {results.map((v, i) => (
-                      <li key={i}>{pollInfo.options[i]}: {v}</li>
+                      <li key={i}>
+                        <span className="result-option">{pollInfo.options[i]}</span>
+                        <span className="result-count">{v}</span>
+                      </li>
                     ))}
                   </ul>
                 </div>
